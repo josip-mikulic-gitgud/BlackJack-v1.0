@@ -2,6 +2,7 @@ package com.example.blackjack;
 
 import javafx.animation.PauseTransition;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.text.Text;
@@ -30,21 +31,26 @@ public class BlackJackController {
     @FXML
     private Label lblSpielerSumme;
 
-
     private int phase = 0;
     private String eingabe = null;
     private Random random = new Random();
     private int summeSpieler = 0;
     private int summeDealer = 0;
-    private int dealerKarte1 = 0;
-    private int dealerKarte2 = 0;
+    private Karte dealerKarte1;
+    private Karte dealerKarte2;
 
-    private int spielerKarte1 = 0;
-    private int spielerKarte2 = 0;
+    private Karte spielerKarte1;
+    private Karte spielerKarte2;
+
+    private int asseSpieler = 0;
+    private int asseDealer = 0;
 
     @FXML
-    protected void onHelloButtonClick() {
-        chatArea.appendText("Spieler: Hallo\n");
+    protected void onStartButtonClick() {
+        if (phase != 0) {
+            return; // Bricht die Methode sofort ab, der Klick wird ignoriert
+        }
+        chatArea.appendText("\nSpieler: Hallo\n");
         chatArea.appendText("Dealer: Hallo, mein Name ist Lucy ; )\n");
         chatArea.appendText("Lucy: Wollen Sie vielleicht Blackjack spielen? \n");
         phase = 1;
@@ -102,28 +108,50 @@ public class BlackJackController {
     }
 
     private void starteNeueRunde() {
-        phase = 0; // Klicks während der Pause sperren
-
+        phase = 99; // 99 blockiert ALLES (Start, Ja und Nein), bis die Animation fertig ist!
+        asseSpieler = 0;
+        asseDealer = 0;
         summeSpieler = 0;
         summeDealer = 0;
+
         spielerKarte1 = zieheKarte();
         spielerKarte2 = zieheKarte();
         dealerKarte1 = zieheKarte();
         dealerKarte2 = zieheKarte();
-        summeSpieler = spielerKarte1 + spielerKarte2;
-        summeDealer = dealerKarte1 + dealerKarte2;
+
+        if (spielerKarte1.istAs()) {
+            asseSpieler++;
+        }
+        if (spielerKarte2.istAs()) {
+            asseSpieler++;
+        }
+
+        if (dealerKarte1.istAs()) {
+            asseDealer++;
+        }
+        if (dealerKarte2.istAs()) {
+            asseDealer++;
+        }
+
+        summeSpieler = spielerKarte1.getValue() + spielerKarte2.getValue();
+        summeDealer = dealerKarte1.getValue() + dealerKarte2.getValue();
+
+        if (summeSpieler > 21 && asseSpieler > 0) {
+            summeSpieler -= 10;
+            asseSpieler--; // Ein As zählt jetzt als 1, das andere bleibt 11
+        }
 
         textloeschen();
         chatArea.appendText("\n--- Neue Runde startet, Karten verden verteilt! ---\n");
 
-        warten(1.2, () ->{      // Erst nach 1,2 Sekunden werden die neuen Karten angezeigt:
+        warten(1.0, () ->{      // Erst nach 1,2 Sekunden werden die neuen Karten angezeigt:
 
-            spielerTextArea.setText("Spieler Blatt: " + spielerKarte1 + " + " + spielerKarte2 );
+            spielerTextArea.setText("Spieler: " + spielerKarte1 + " + " + spielerKarte2 );
             lblSpielerSumme.setText("Spieler Summe: "+ summeSpieler);
-            dealerTextArea.setText("Haus-Karten: " + dealerKarte1 + " + ( verdeckt )\n");
+            dealerTextArea.setText("Haus: " + dealerKarte1 + " + ( verdeckt )\n");
             chatArea.appendText("Haus-Karten: " + dealerKarte1 + " + ( verdeckt )\n");
-            chatArea.appendText("Spieler Blatt: " + spielerKarte1 + " + " + spielerKarte2+ "\n");
-            lblDealerSumme.setText("Haus Summe: " + dealerKarte1);
+            chatArea.appendText("Spieler-Karten: " + spielerKarte1 + " + " + spielerKarte2+ "\n");
+            lblDealerSumme.setText("Haus Summe: " + dealerKarte1.getValue());
 
             if (summeSpieler == 21) {
                 chatArea.appendText("BLACKJACK! Spieler gewinnt! :)\n");
@@ -139,10 +167,20 @@ public class BlackJackController {
     }
 
     private void spielerZugausfuehren(){
-        int neueKarte = zieheKarte();
+        Karte neueKarte = zieheKarte();
+
+        if (neueKarte.istAs()){
+            asseSpieler++;
+        }
+
         spielerTextArea.appendText(" + "+neueKarte);
         chatArea.appendText("Spieler zieht + " +neueKarte+"\n");
-        summeSpieler += neueKarte;
+
+        summeSpieler += neueKarte.getValue();
+        if(summeSpieler > 21 && asseSpieler > 0) {
+            summeSpieler -= 10;
+            asseSpieler--;
+        }
         lblSpielerSumme.setText("Spieler Summe: "+ summeSpieler);
 
         if (summeSpieler > 21) {
@@ -164,23 +202,38 @@ public class BlackJackController {
     }
 
     private void dealerDecktAuf(){
-        phase = 0; // Sperrt Klicks während der Pausen
+        phase = 99; // 99 blockiert ALLES (Start, Ja und Nein)
+
+        if(summeDealer > 21 && asseDealer > 0) {
+            summeDealer -= 10;
+            asseDealer--;
+        }
         chatArea.appendText("Spieler hat " + summeSpieler + " Punkte!\n");
-
-        chatArea.appendText("Dealer deckt Karte: " + dealerKarte2 + " auf.\n");
-        chatArea.appendText("Haus-Karten: " + dealerKarte1 + " + ( " + dealerKarte2 + " )");
-
-        warten(1.5, ()-> {
-            dealerTextArea.setText("Haus-Karten: " + dealerKarte1 + " + ( " + dealerKarte2 + " )");
+        chatArea.appendText("Dealer deckt Karte: " );
+        warten(1.0, () -> {
+            chatArea.appendText( dealerKarte2 + " auf.\n");
+            dealerTextArea.setText("Haus: " + dealerKarte1 + " + ( " + dealerKarte2 + " )");
             lblDealerSumme.setText("Haus Summe: " + summeDealer);
-            warten(1.5, () -> dealerZugausfuehren());
+
+            warten(0.8, ()-> {
+                chatArea.appendText("Haus-Karten: " + dealerKarte1 + " + ( " + dealerKarte2 + " )");
+                warten(1.0, () -> dealerZugausfuehren());
+            });
         });
     }
 
     private void dealerZugausfuehren() {
         if (summeDealer < 17) {
-            int neueKarte = zieheKarte();
-            summeDealer += neueKarte;
+            Karte neueKarte = zieheKarte();
+            if(neueKarte.istAs()){
+                asseDealer++;
+            }
+            summeDealer += neueKarte.getValue();
+
+            if(summeDealer > 21 && asseDealer > 0) {
+                summeDealer -= 10;
+                asseDealer--;
+            }
             dealerTextArea.appendText(" + " + neueKarte);
             chatArea.appendText(" + " + neueKarte);
             lblDealerSumme.setText("Haus Summe: " + summeDealer);
@@ -194,6 +247,7 @@ public class BlackJackController {
                 ausgabeTxt.setText("Gewonnen!");
             }
             else if (summeDealer == summeSpieler) {
+                chatArea.appendText("\nHaus hat: " + summeDealer + " Punkte.\n");
                 chatArea.appendText("\nGleichstand.\n");
                 ausgabeTxt.setText("Gleichstand. ");
             } else if (summeDealer < summeSpieler) {
@@ -209,9 +263,9 @@ public class BlackJackController {
 
     }
 
-
-    private int zieheKarte() {
-        return random.nextInt(10) + 2; // Gibt eine Zahl zwischen 2 und 11 zurück
+    private Karte zieheKarte() {
+        Karte[] karten = Karte.values(); // erstellen Array von Karten nur mit werten
+        return karten[random.nextInt(karten.length)]; // gibt einen wert( Karte ) zurück
     }
 
     private void textloeschen(){

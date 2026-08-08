@@ -12,12 +12,12 @@ public class BlackJackApplication extends Application {
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(BlackJackApplication.class.getResource("blackjack-view.fxml"));
         Scene scene = new Scene(fxmlLoader.load());
-        stage.setTitle("BlackJack / Version 1.0");
+        stage.setTitle("BlackJack / Version 1.2");
         stage.setScene(scene);
         stage.show();
     }
 
     public static void main(String[] args) {
-        launch();
+        launch(args);
     }
 }
